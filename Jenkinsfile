@@ -1,10 +1,10 @@
 pipeline {
     agent any
     environment {
-        EC2_IP = '54.176.206.128'
-        SSH_CREDENTIALS_ID = 'ec2-ssh-credentials'
+        // EC2_IP = '54.176.206.128'
+        // SSH_CREDENTIALS_ID = 'ec2-ssh-credentials'
         registry = "docker.io"
-        dockerImage = "itsfarhanpatel/new-img"
+        dockerImage = "itsfarhanpatel/myimg"
     }
 
     stages {
