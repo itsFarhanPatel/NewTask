@@ -32,14 +32,9 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
+       stage('Deploy Docker Container') {
             steps {
-                script {
-                    sshagent(credentials: [ssh-credentials-id]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${EC2_IP} 'bash -s' < deploy-script.sh
-                        """
-                    }
+                    sh 'docker run -d -p 3000:3000 simple-node-app'
                 }
             }
         }
