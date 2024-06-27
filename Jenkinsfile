@@ -38,5 +38,13 @@ pipeline {
                 }
             }
         }
+          post {
+        always {
+            script {
+                sh 'docker container rm -f simple-node-app || true'
+            }
+        }
     }
-}
+}            
+    }        
+
