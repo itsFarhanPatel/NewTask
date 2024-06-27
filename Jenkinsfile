@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        registry = "itsfarhanpatel/simple-node-app"
+        registryCredential = 'docker-credentials'
+        dockerImage = ''
+    }
+
     stages {
         stage('Clone Repository') {
             steps {
@@ -10,20 +16,27 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("simple-node-app")
+                    dockerImage = docker.build registry
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
+                        dockerImage.push()
+                    }
                 }
             }
         }
         stage('Deploy Docker Container') {
             steps {
                 script {
-                    docker.withRegistry('', 'docker-credentials') {
-                        dockerImage.push('latest')
+                    dockerImage.inside('-p 3000:3000') {
+                        sh 'docker run -d -p 3000:3000 ${registry}'
                     }
-                    sh 'docker run -d -p 3000:3000 simple-node-app'
                 }
             }
         }
     }
 }
-
