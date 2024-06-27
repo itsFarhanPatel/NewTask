@@ -1,49 +1,56 @@
 pipeline {
     agent any
+    environment {
+        EC2_IP = '54.176.206.128'
+        SSH_CREDENTIALS_ID = 'ec2-ssh-credentials'
+        registry = "docker.io"
+        dockerImage = "itsfarhanpatel/new-img"
+    }
 
     stages {
-        stage('Git Checkout') {
+        stage('Checkout') {
             steps {
-               git branch: 'master', credentialsId: 'git-credentials', url: 'https://github.com/itsFarhanPatel/NewTask.git'
-            }
-        }   
-         stage('Build & Tag Docker Image') {
-            steps {
-               script {
-                   withDockerRegistry(credentialsId: 'docker-credentials', toolName: 'docker') {
-                            sh "docker build -t itsfarhanpatel/new:latest ."
-                    }
-               }
+                git 'https://github.com/itsFarhanPatel/NewTask.git'
             }
         }
-        stage('Push Docker Image') {
-            steps {
-               script {
-                   withDockerRegistry(credentialsId: 'docker-credentials', toolName: 'docker') {
-                            sh "docker push itsfarhanpatel/new:latest"
-                    }
-               }
-            }
-        }
-        stage('Deploy to EC2') {
+
+        stage('Build Docker image') {
             steps {
                 script {
-                    // Login to Docker Hub using --password-stdin
-                    withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
-                    }
+                    dockerImage = docker.build("${registry}/${dockerImage}")
+                }
+            }
+        }
 
-                    // Push the Docker image to Docker Hub
+        stage('Push Docker image') {
+            steps {
+                script {
                     docker.withRegistry('', 'docker-credentials') {
                         dockerImage.push('latest')
                     }
+                }
+            }
+        }
 
-                    // Deploy to EC2 instance
-                    sshagent(['ssh-credentials-id']) {
-                        sh 'ssh -o StrictHostKeyChecking=no ubuntu@54.176.206.128 docker run -d -p 3000:3000 itsfarhanpatel/new:latest'
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    sshagent(credentials: [ssh-credentials-id]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@${EC2_IP} 'bash -s' < deploy-script.sh
+                        """
                     }
                 }
             }
         }
     }
+    post {
+        always {
+            cleanWs()
+        }
+        failure {
+            echo 'Deployment failed.'
+        }
+    }
 }
+
