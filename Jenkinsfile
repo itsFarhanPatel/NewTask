@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/itsFarhanPatel/NewTask.git'
+                git ' https://github.com/itsFarhanPatel/NewTask.git'
             }
         }
         stage('Build Docker Image') {
@@ -32,7 +32,7 @@ pipeline {
         stage('Deploy Docker Container') {
             steps {
                 script {
-                    sh 'docker run -d -p 3000:3000 --name simple-node-app ${registry}'
+                    sh 'docker run -d -p 3001:3000 --name simple-node-app ${registry}'
                 }
             }
         }
