@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        registry = "itsfarhanpatel/simple-node-app"
+        registry = "your-dockerhub-username/simple-node-app"
         registryCredential = 'docker-credentials'
         dockerImage = ''
     }
@@ -32,19 +32,16 @@ pipeline {
         stage('Deploy Docker Container') {
             steps {
                 script {
-                    dockerImage.inside('-p 3000:3000') {
-                        sh 'docker run -d -p 3000:3000 ${registry}'
-                    }
+                    sh 'docker run -d -p 3000:3000 --name simple-node-app ${registry}'
                 }
             }
         }
-          post {
+    }
+    post {
         always {
             script {
                 sh 'docker container rm -f simple-node-app || true'
             }
         }
     }
-}            
-    }        
-
+}
