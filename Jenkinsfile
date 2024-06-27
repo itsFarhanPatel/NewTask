@@ -1,62 +1,48 @@
 pipeline {
     agent any
 
-    environment {
-        registry = "itsfarhanpatel/simple-node-app"
-        registryCredential = 'docker-credentials'
-        dockerImage = ''
-        ec2Address = '54.176.206.128'
-        ec2User = 'ubuntu'
-        sshCredential = 'ssh-credentials-id'
-    }
-
     stages {
-        stage('Clone Repository') {
+        stage('Git Checkout') {
             steps {
-                git 'https://github.com/itsFarhanPatel/NewTask.git'
+               git branch: 'master', credentialsId: 'git-credentials', url: 'https://github.com/itsFarhanPatel/NewTask.git'
             }
-        }
-        stage('Build Docker Image') {
+        }   
+         stage('Build & Tag Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build registry
-                }
+               script {
+                   withDockerRegistry(credentialsId: 'docker-credentials', toolName: 'docker') {
+                            sh "docker build -t itsfarhanpatel/new:latest ."
+                    }
+               }
             }
         }
         stage('Push Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
-                        dockerImage.push()
+               script {
+                   withDockerRegistry(credentialsId: 'docker-credentials', toolName: 'docker') {
+                            sh "docker push itsfarhanpatel/new:latest"
                     }
-                }
+               }
             }
         }
-        stage('Deploy Docker Container on EC2') {
+        stage('Deploy to EC2') {
             steps {
                 script {
-                    sshagent([sshCredential]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${ec2User}@${ec2Address} << EOF
-                        docker pull ${registry}
-                        docker rm -f simple-node-app || true
-                        docker run -d -p 3000:3000 --name simple-node-app ${registry}
-                        EOF
-                        """
+                    // Login to Docker Hub using --password-stdin
+                    withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
+                    }
+
+                    // Push the Docker image to Docker Hub
+                    docker.withRegistry('', 'docker-credentials') {
+                        dockerImage.push('latest')
+                    }
+
+                    // Deploy to EC2 instance
+                    sshagent(['ssh-credentials-id']) {
+                        sh 'ssh -o StrictHostKeyChecking=no ubuntu@54.176.206.128 docker run -d -p 3000:3000 itsfarhanpatel/new:latest'
                     }
                 }
-            }
-        }
-    }
-    post {
-        always {
-            script {
-                echo 'Cleaning up Docker containers'
-                sh """
-                ssh -o StrictHostKeyChecking=no ${ec2User}@${ec2Address} << EOF
-                docker container rm -f simple-node-app || true
-                EOF
-                """
             }
         }
     }
