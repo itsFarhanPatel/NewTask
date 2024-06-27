@@ -34,7 +34,7 @@ pipeline {
 
        stage('Deploy Docker Container') {
             steps {
-                    sh 'docker run -d -p 3000:3000 simple-node-app'
+                    sh 'docker run -d -p 3000:3000 itsfarhanpatel/myimg '
                 }
             }
         }
